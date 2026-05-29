@@ -1,6 +1,13 @@
 import { Client } from "pg";
 
-async function query(queryObject) {
+function getSSLConfig() {
+  if (process.env.NODE_ENV === "production") {
+    return { rejectUnauthorized: false };
+  }
+  return false;
+}
+
+async function getNewClient() {
   const client = new Client({
     host: process.env.POSTGRES_HOST,
     port: process.env.POSTGRES_PORT,
@@ -9,19 +16,13 @@ async function query(queryObject) {
     password: process.env.POSTGRES_PASSWORD,
     ssl: getSSLConfig(),
   });
+  await client.connect();
+  return client;
+}
 
-  function getSSLConfig() {
-    if (process.env.NODE_ENV === "development") {
-      return false;
-    } else {
-      return {
-        rejectUnauthorized: false,
-      };
-    }
-  }
-
+async function query(queryObject) {
+  const client = await getNewClient();
   try {
-    await client.connect();
     const result = await client.query(queryObject);
     return result;
   } catch (error) {
@@ -33,5 +34,6 @@ async function query(queryObject) {
 }
 
 export default {
-  query: query,
+  query,
+  getNewClient,
 };
